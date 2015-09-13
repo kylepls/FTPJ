@@ -10,10 +10,13 @@ A basic FTP program written in Java
 
 ### Pictures
 Login screen
+
 ![enter image description here](http://i.imgur.com/H9HZ5tp.png)
 
 File browser
+
 ![enter image description here](http://i.imgur.com/WPXjJxt.png)
 
 Moving files
+
 ![enter image description here](http://i.imgur.com/rEwQZms.png)
