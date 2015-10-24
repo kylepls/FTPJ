@@ -18,7 +18,7 @@ public class ProgramPassword {
     private transient byte[] password;
     
     private String passwordSalt = "";
-    private String passwordHash = "";
+    private String passwordHash = ""; 
     
     public void save() throws IOException {
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(saveFile));
