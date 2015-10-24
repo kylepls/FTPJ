@@ -1,135 +1,95 @@
 package in.kyle.ftp.internal.protocols.sftp;
 
-import in.kyle.ftp.internal.protocols.generic.ProtocolCredentials;
+import com.jcraft.jsch.*;
 import in.kyle.ftp.internal.protocols.generic.Protocol;
+import in.kyle.ftp.internal.protocols.generic.ProtocolCredentials;
 import in.kyle.ftp.internal.protocols.generic.ProtocolFile;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.Selectors;
-import org.apache.commons.vfs2.impl.StandardFileSystemManager;
-import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Arrays;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * The class SFTPUtil containing uploading, downloading, checking if file exists
- * and deleting functionality using Apache Commons VFS (Virtual File System)
- * Library
- *
- * @author Ashok
- * 
- * Modified by @Kyle
+ * Created by Kyle on 9/13/2015.
  */
 public class ProtocolSFTP extends Protocol {
     
-    private String username;
-    private String password;
-    private String hostname;
-    private int port;
-    private StandardFileSystemManager manager;
-    private FileSystemOptions options;
+    private Session session;
+    private ChannelSftp channel;
     
-    public ProtocolSFTP(ProtocolCredentials protocolCredentials) throws FileSystemException {
+    public ProtocolSFTP(ProtocolCredentials protocolCredentials) {
         super(protocolCredentials);
-        this.username = protocolCredentials.getUsername();
-        this.password = new String(protocolCredentials.getPassword());
-        this.hostname = protocolCredentials.getAddress();
-        this.port = protocolCredentials.getPort();
-        this.manager = new StandardFileSystemManager();
-        this.options = new FileSystemOptions();
-        setDirectory("/home");
-        SftpFileSystemConfigBuilder.getInstance().setStrictHostKeyChecking(options, "no");
-        SftpFileSystemConfigBuilder.getInstance().setUserDirIsRoot(options, false);
-        SftpFileSystemConfigBuilder.getInstance().setTimeout(options, 10000);
-    }
-    
-    @Override
-    public void delete(String remoteFilePath) throws Exception {
-        FileObject remoteFile = resolveRemoveFile(remoteFilePath);
-        if (remoteFile.exists()) {
-            remoteFile.delete();
-        }
-    }
-    
-    public boolean exist(String remoteFilePath) {
-        try {
-            FileObject remoteFile = resolveRemoveFile(remoteFilePath);
-            return remoteFile.exists();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    public FileObject resolveRemoveFile(String path) throws FileSystemException {
-        return manager.resolveFile(createConnectionString(path), options);
-    }
-    
-    private String createConnectionString(String remoteFilePath) {
-        return "sftp://" + username + ":" + password + "@" + hostname + "/" + remoteFilePath;
     }
     
     @Override
     public boolean connect() {
         try {
-            manager.init();
+            session = new JSch().getSession(protocolCredentials.getUsername(), protocolCredentials.getAddress(), protocolCredentials
+                    .getPort());
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.setPassword(new String(protocolCredentials.getPassword()));
+            session.connect();
+    
+            channel = (ChannelSftp) session.openChannel("sftp");
+            channel.connect();
             return true;
-        } catch (FileSystemException e) {
-            e.printStackTrace();
+        } catch (JSchException e) {
             return false;
         }
     }
     
     @Override
-    public boolean exists(String file) throws FileSystemException {
-        return resolveRemoveFile(file).exists();
+    public boolean exists(String file) throws Exception {
+        try {
+            channel.ls(file);
+            return true;
+        } catch (SftpException e) {
+            if (e.id != 2) {
+                throw e;
+            }
+            return false;
+        }
     }
     
     @Override
-    public List<ProtocolFile> listFiles(String directory) {
-        try {
-            FileObject fileObject = resolveRemoveFile(directory);
-            System.out.println("File obj " + fileObject);
-            return Arrays.stream(fileObject.getChildren()).map(SFTPFile::new).collect(Collectors.toList());
-        } catch (FileSystemException e) {
-            e.printStackTrace();
-            return null;
-        }
+    public List<ProtocolFile> listFiles(String directory) throws Exception {
+        return (List<ProtocolFile>) channel.ls(directory).stream().map(o -> new SFTPFile(directory, (ChannelSftp.LsEntry) o)).collect
+                (Collectors
+                .toList());
     }
     
     @Override
     public void moveObject(String from, String to) throws Exception {
-        FileObject remoteFile = resolveRemoveFile(from);
-        FileObject remoteDestFile = resolveRemoveFile(to);
-    
-        if (remoteFile.exists()) {
-            remoteFile.moveTo(remoteDestFile);
-        } else {
-            throw new FileNotFoundException("Could not find in remote path " + from);
+       // FileDirectory = "/appl/user/home/test/";
+       /*
+        channel.cd(FileDirectory+"temp/");
+        if (sftp.get( newfile ) != null){
+            sftp.rename(FileDirectory + "temp/" + newfile ,
+                    FileDirectory + newfile );
+            sftp.cd(FileDirectory);
+            sftp.rm(existingfile );
         }
+        */
     }
     
     @Override
-    public void download(String path, File file) throws Exception {
-        // Append _downlaod_from_sftp to the given file name.
-        //String downloadFilePath = localFilePath.substring(0, localFilePath.lastIndexOf(".")) + "_downlaod_from_sftp" + 
-        // localFilePath.substring(localFilePath.lastIndexOf("."), localFilePath.length());
-    
-        // Create local file object. Change location if necessary for new downloadFilePath
-        FileObject localFile = manager.resolveFile(file.getAbsolutePath());
-        FileObject remoteFile = resolveRemoveFile(path);
-        localFile.copyFrom(remoteFile, Selectors.SELECT_SELF);
+    public void download(String path, OutputStream file) throws Exception {
+        channel.get(path, file);
     }
     
     @Override
-    public void upload(File file, String path) throws Exception {
-        FileObject localFile = manager.resolveFile(file.getAbsolutePath());
-        FileObject remoteFile = resolveRemoveFile(path);
-        remoteFile.copyFrom(localFile, Selectors.SELECT_SELF);
+    public void upload(InputStream file, String path) throws Exception {
+        channel.put(file, path);
+    }
+    
+    @Override
+    public void delete(String path) throws Exception {
+        channel.rm(path);
+    }
+    
+    @Override
+    public String getHome() throws Exception {
+        return channel.getHome();
     }
 }

@@ -8,6 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 /**
  * Created by Kyle on 9/12/2015.
@@ -25,7 +26,8 @@ public class LocalDirectoryPopupMenu extends DirectoryPanePopupMenu {
         upload = new JMenuItem("Upload");
         upload.addActionListener(e -> {
             try {
-                protocol.upload(getSelectedFile(), protocol.getDirectory() + "/" + getSelectedFile().getName());
+                protocol.upload(Files.newInputStream(getSelectedFile().toPath()), protocol.getDirectory() + "/" + getSelectedFile().getName
+                        ());
                 ftpj.getFtpFrame().getRemoteDirectory().rebuildFiles();
             } catch (Exception e1) {
                 e1.printStackTrace();

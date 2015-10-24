@@ -5,11 +5,12 @@ import in.kyle.ftp.event.ShutDownEvent;
 import in.kyle.ftp.internal.protocols.generic.Protocol;
 import in.kyle.ftp.internal.protocols.generic.ProtocolCredentials;
 import in.kyle.ftp.storage.ProgramData;
+import in.kyle.ftp.storage.ProgramPassword;
 import in.kyle.ftp.ui.components.FTPFrame;
 import in.kyle.ftp.ui.popup.LoginForm;
+import in.kyle.ftp.ui.popup.PasswordPopup;
 
 import javax.swing.*;
-import java.io.IOException;
 
 /**
  * Created by Kyle on 9/11/2015.
@@ -21,6 +22,7 @@ public class FTPJ {
     private ProtocolCredentials credentials;
     private Protocol protocol;
     private FTPFrame ftpFrame;
+    private ProgramPassword programPassword;
     
     public static void main(String[] args) {
         try {
@@ -33,8 +35,17 @@ public class FTPJ {
     
     public FTPJ() throws Exception {
         System.out.println("Loading data");
-        data = ProgramData.get();
+        programPassword = ProgramPassword.get();
+        
+        System.out.println("Login");
+        PasswordPopup passwordPopup = new PasswordPopup(programPassword);
     
+        System.out.println("Login complete");
+    
+        data = ProgramData.get(programPassword);
+    
+        System.out.println("Data: " + data.toString());
+        
         System.out.println("Loading event manager");
         eventManager = new EventManager();
         
@@ -67,7 +78,7 @@ public class FTPJ {
         eventManager.fire(new ShutDownEvent());
         try {
             data.save();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             new Error(e);
         }

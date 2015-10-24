@@ -1,62 +1,41 @@
 package in.kyle.ftp.internal.protocols.sftp;
 
+import com.jcraft.jsch.ChannelSftp;
 import in.kyle.ftp.internal.protocols.generic.ProtocolFile;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileType;
 
 /**
  * Created by Kyle on 9/11/2015.
  */
 public class SFTPFile extends ProtocolFile {
     
-    private FileObject file;
+    private ChannelSftp.LsEntry file;
+    private String directory;
     
-    public SFTPFile(FileObject file) {
+    public SFTPFile(String directory, ChannelSftp.LsEntry file) {
         this.file = file;
+        this.directory = directory;
+        if (!this.directory.endsWith("/")) {
+            this.directory += "/";
+        }
     }
     
     @Override
     public String getName() {
-        return file.getName().getBaseName();
+        return file.getFilename();
     }
     
     @Override
     public String getPath() {
-        System.out.println("File " + file);
-        return file.getName().getPath();
+        return directory + file.getFilename();
     }
     
     @Override
     public boolean isFile() {
-        try {
-            switch (file.getType()) {
-                case FOLDER:
-                    return false;
-                case FILE:
-                    return true;
-                case FILE_OR_FOLDER:
-                    return false;
-                case IMAGINARY:
-                    return false;
-                default:
-                    return false;
-            }
-        } catch (FileSystemException e) {
-            e.printStackTrace();
-            new Error(e);
-            return false;
-        }
+        return !file.getAttrs().isDir();
     }
     
     @Override
     public boolean isDirectory() {
-        try {
-            return file.getType() == FileType.FOLDER;
-        } catch (FileSystemException e) {
-            e.printStackTrace();
-            new Error(e);
-            return false;
-        }
+        return file.getAttrs().isDir();
     }
 }

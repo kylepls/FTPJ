@@ -3,7 +3,8 @@ package in.kyle.ftp.internal.protocols.generic;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 
 /**
@@ -11,7 +12,7 @@ import java.util.List;
  */
 public abstract class Protocol {
     
-    private ProtocolCredentials protocolCredentials;
+    protected ProtocolCredentials protocolCredentials;
     @Getter
     @Setter
     private String directory = "/";
@@ -28,10 +29,11 @@ public abstract class Protocol {
     
     public abstract void moveObject(String from, String to) throws Exception;
     
-    public abstract void download(String path, File file) throws Exception;
+    public abstract void download(String path, OutputStream file) throws Exception;
     
-    public abstract void upload(File file, String path) throws Exception;
+    public abstract void upload(InputStream file, String path) throws Exception;
     
     public abstract void delete(String path) throws Exception;
     
+    public abstract String getHome() throws Exception;
 }
